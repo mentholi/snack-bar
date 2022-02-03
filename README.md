@@ -1,20 +1,18 @@
-# SmackBar
+# Snack Bar
 
-Bar electron app.
+Electron app to wrap Giosg web application. Does some tricks that cant be done in web application.
 
-## Building
+## Dev installation
 
 * Install requirements:
 ```npm install```
 
-Build the app:
-```
-./build.sh
-```
-or
-```
-./node_modules/.bin/nativefier --darwin-dark-mode-support --clear-cache --icon giosg_ball_1024.png --platform macos --name "Smackbar" https://service.giosg.com/bar
-```
+* Start dev process:
+```npm start```
 
-## Run app after building
-Go to `Smackbar-darwin-x64/` and start `Smackbar.app`.
+## Build for current platform
+```npm run make```
+
+App will be build to `out` directory. To run it go to `out/Snack Bar-darwin-x64/` and start `Smackbar.app`.
+
+Other possible target platforms are Windows and Linux/Debian.
