@@ -1,9 +1,9 @@
 {
   "name": "snack-bar",
   "productName": "Snack Bar",
-  "copyright": "Copyright © year ${author}",
+  "copyright": "Copyright © year, Arsi Halttunen",
   "version": "1.0.0",
-  "description": "",
+  "description": "Wrapper app for Giosg web application which allows push notifications and few other things not allowed by original app.",
   "main": "main.js",
   "scripts": {
     "start": "electron-forge start",
