@@ -1,5 +1,6 @@
 const { ipcRenderer } = require("electron");
 const path = require("path");
+const Store = require("electron-store");
 
 const {
   START_NOTIFICATION_SERVICE,
@@ -10,6 +11,8 @@ const {
 } = require("electron-push-receiver/src/constants");
 
 console.log("*** PRELOAD");
+
+const store = new Store();
 
 ipcRenderer.on(NOTIFICATION_SERVICE_STARTED, (_, token) => {
   console.log("*******service successfully started", token);
@@ -30,14 +33,41 @@ ipcRenderer.on(TOKEN_UPDATED, (_, token) => {
 
 // Display notification
 ipcRenderer.on(NOTIFICATION_RECEIVED, (_, serverNotificationPayload) => {
-  console.log("*************** NOTIFICATION_RECEIVED");
+  console.log("***** NOTIFICATION_RECEIVED");
   // check to see if payload contains a body string, if it doesn't consider it a silent push
   if (serverNotificationPayload.notification.body) {
-    // payload has a body, so show it to the user
-    console.log(
-      "******* Display notification",
-      JSON.stringify(serverNotificationPayload)
-    );
+    const currentPath = window.document.location.pathname;
+
+    // Skip if notifications are muted
+    const isNotificationsEnabled = store.get("notifications-enabled");
+
+    // Skip showing notification if app is visible
+    const isDesktopModeAndVisible =
+      store.get("giosg-mode") === "desktop" &&
+      window.document.visibilityState === "visible";
+
+    // Skip if mobile view and we are in correct view
+    const isMobileModeAndVisible =
+      store.get("giosg-mode") === "mobile" &&
+      window.document.visibilityState === "visible" &&
+      currentPath === serverNotificationPayload.data.default_action_path;
+
+    // Logging here for debug purposes, this is useless otherwise
+    if (!isNotificationsEnabled) {
+      console.log("** Skipped showing notification as they are muted");
+      return;
+    } else if (isDesktopModeAndVisible) {
+      console.log(
+        "** Skipped showing notification as the app is visible on desktop mode"
+      );
+      return;
+    } else if (isMobileModeAndVisible) {
+      console.log(
+        "** Skipped showing notification as the app is visible on mobile mode and channel is correct"
+      );
+      return;
+    }
+
     let myNotification = new Notification(
       serverNotificationPayload.notification.title,
       {
@@ -47,10 +77,15 @@ ipcRenderer.on(NOTIFICATION_RECEIVED, (_, serverNotificationPayload) => {
     );
 
     myNotification.onclick = () => {
-      console.log(
-        "******* Notification clicked",
-        JSON.stringify(serverNotificationPayload)
-      );
+      const payload = JSON.stringify(serverNotificationPayload);
+      const isCorrectPath =
+        window.document.location.pathname ===
+        serverNotificationPayload.data.default_action_path;
+      console.log("******* Notification clicked", payload);
+      // No need to reload view if we are on right place
+      if (!isCorrectPath) {
+        ipcRenderer.invoke("on-notification-click", payload);
+      }
     };
   } else {
     // payload has no body, so consider it silent (and just consider the data portion)

@@ -1,11 +1,4 @@
-const {
-  app,
-  BrowserWindow,
-  ipcMain,
-  Menu,
-  MenuItem,
-  Notification,
-} = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, Notification } = require("electron");
 const { setup: setupPushReceiver } = require("electron-push-receiver");
 const Store = require("electron-store");
 const fetch = require("electron-fetch").default;
@@ -16,12 +9,18 @@ const INITIAL_WINDOW_SIZE = {
   height: 700,
 };
 
-let CURRENT_MODE = "desktop"; // "mobile"
+let NOTIFICATIONS_INITIALIZED = false;
 
 const USER_AGENT_POSTFIX = "Android/Look-a-like";
 
+const BASE_URL = "https://service.giosg.com";
+
 let waitForAccessToken;
 const store = new Store();
+
+store.set("giosg-mode", "desktop");
+store.set("notifications-enabled", true);
+store.set("open-conversation-on-notification-click", true);
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -93,15 +92,35 @@ const createWindow = () => {
 };
 
 function loadMainDocument() {
-  CURRENT_MODE === "desktop"
+  store.get("giosg-mode") === "desktop"
     ? mainWindow.loadFile("index.html")
-    : mainWindow.loadURL("https://service.giosg.com/bar", {
-        userAgent: `${mainWindow.webContents.getUserAgent()} ${USER_AGENT_POSTFIX}`,
-      });
+    : loadWebUrl("/bar");
 }
 
-function toggleMode() {
-  CURRENT_MODE = CURRENT_MODE === "desktop" ? "mobile" : "desktop";
+function loadWebUrl(urlPath) {
+  const url = BASE_URL + urlPath;
+  mainWindow.loadURL(url, {
+    userAgent: `${mainWindow.webContents.getUserAgent()} ${USER_AGENT_POSTFIX}`,
+  });
+}
+
+function toggleMode(overridenMode) {
+  const mode = overridenMode
+    ? overridenMode
+    : store.get("giosg-mode") === "desktop"
+    ? "mobile"
+    : "desktop";
+  store.set("giosg-mode", mode);
+}
+
+function toggleNotifications() {
+  const key = "notifications-enabled";
+  store.set(key, !store.get(key));
+}
+
+function toggleOpenConvesationOnNotificationClick() {
+  const key = "open-conversation-on-notification-click";
+  store.set(key, !store.get(key));
 }
 
 // This needs to be set so that we can read access token from frame
@@ -128,11 +147,14 @@ app.on("window-all-closed", () => {
 });
 
 function showWelcomeNotification() {
-  new Notification({
-    title: "Welcome to Snack Bar!",
-    body: "Notifications enabled and working! 😎",
-    icon: path.join(__dirname, "snack_bar.png"),
-  }).show();
+  if (!NOTIFICATIONS_INITIALIZED) {
+    new Notification({
+      title: "Welcome to Snack Bar!",
+      body: "Notifications enabled and working! 😎",
+      icon: path.join(__dirname, "snack_bar.png"),
+    }).show();
+  }
+  NOTIFICATIONS_INITIALIZED = true;
 }
 
 function setupNotifications() {
@@ -172,16 +194,23 @@ function setupNotifications() {
       });
     return token;
   });
+
+  ipcMain.handle("on-notification-click", async (event, payloadStr) => {
+    const payload = JSON.parse(payloadStr);
+    console.log("Ä***************ON MAIN", typeof payload, payload);
+
+    // Force mobile mode to open specific channel when notification has been clicked.
+    // This is because embedded cant be commanded to open new panel at the momen
+    if (store.get("open-conversation-on-notification-click") === true) {
+      toggleMode("mobile");
+      loadWebUrl(payload.data.default_action_path);
+    }
+
+    return payload;
+  });
 }
 
-/**
-{"subscription_id":"b9c63823-c5cb-4ecd-a3aa-8b1282e2f063","subscribed_events":["Pending chat","Operator chat","New message"],"subscription_name":"<Device name>","enabled":true,"user_id":"7f9d2c80-4b1c-11e1-a687-00163e0c01f2","organization_id":"a17cea80-e397-11e0-b51a-00163e0c01f2","created_at":"2022-02-03T13:23:38.220434Z","registration_id":"fcPYwHufiZo:APA91bEf3CYnQtKB8Kronow0iXtqZfe8jAjUFoVMpunVvHhuc37pgvxHeWvOzTt9NV5GbBighWz1ycql1pAiN5gRaX0wV4XBvfWiSRTHlPTH4GNlITU9MUs_zSo_PzM48JTF-_VqApUH"}
-
-
- */
-
 function buildMenu() {
-  console.log(Menu.getApplicationMenu());
   const template = [
     {
       role: "appmenu",
@@ -203,7 +232,6 @@ function buildMenu() {
         },
       ],
     },
-
     {
       label: "View",
       submenu: [
@@ -238,6 +266,27 @@ function buildMenu() {
         },
         {
           role: "togglefullscreen",
+        },
+      ],
+    },
+    {
+      label: "Notifications",
+      submenu: [
+        {
+          label: "Show notifications",
+          type: "checkbox",
+          checked: store.get("notifications-enabled"),
+          click: () => {
+            toggleNotifications();
+          },
+        },
+        {
+          label: "Go to conversation on click",
+          type: "checkbox",
+          checked: store.get("open-conversation-on-notification-click"),
+          click: () => {
+            toggleOpenConvesationOnNotificationClick();
+          },
         },
       ],
     },
