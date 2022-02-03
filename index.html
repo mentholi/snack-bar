@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="icon"
+      href="images/giosg_icon.png"
+      type="image/gif"
+      sizes="200x200"
+    />
+
+    <title>Snack Bar</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+
+      html {
+        background: url(images/bg1.jpg) no-repeat center center fixed;
+        -webkit-background-size: cover;
+        -moz-background-size: cover;
+        -o-background-size: cover;
+        background-size: cover;
+        transition: background 0.5s linear;
+      }
+      .logo-image {
+        height: 40px;
+        padding: 20px 60px;
+      }
+      .disclaimer {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+        color: red;
+        font-family: monospace;
+        font-size: 12px;
+      }
+    </style>
+    <script>
+      const numPossibleBackgrounds = 7;
+      const getBgNumber = () => {
+        return Math.floor(Math.random() * numPossibleBackgrounds) + 1;
+      };
+      const changeBackground = () => {
+        const html = document.getElementsByTagName("html")[0];
+        html.style.backgroundImage = `url('images/bg${getBgNumber()}.jpg')`;
+      };
+
+      setInterval(() => {
+        changeBackground();
+      }, 10000);
+    </script>
+    <script src="./renderer.js">
+    </script>
+  </head>
+  <body>
+    <img class="logo-image" src="images/giosg-navbar_logo.svg" />
+    <small class="disclaimer">Not a official Giosg product</small>
+    <script
+      id="embedded-giosg"
+      src="https://static.giosg.com/embedded-giosg/embedded-giosg.js"
+      defer
+    ></script>
+  </body>
+</html>

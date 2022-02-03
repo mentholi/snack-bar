@@ -1,0 +1,60 @@
+{
+  "name": "snack-bar",
+  "productName": "Snack Bar",
+  "copyright": "Copyright © year ${author}",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron-forge start",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "author": "Arsi Halttunen",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron-forge/cli": "^6.0.0-beta.63",
+    "@electron-forge/maker-deb": "^6.0.0-beta.63",
+    "@electron-forge/maker-rpm": "^6.0.0-beta.63",
+    "@electron-forge/maker-squirrel": "^6.0.0-beta.63",
+    "@electron-forge/maker-zip": "^6.0.0-beta.63",
+    "electron": "^17.0.0"
+  },
+  "dependencies": {
+    "electron-fetch": "^1.7.4",
+    "electron-push-receiver": "^2.1.3",
+    "electron-squirrel-startup": "^1.0.0",
+    "electron-store": "^8.0.1"
+  },
+  "config": {
+    "forge": {
+      "packagerConfig": {
+        "icon": "snack_bar",
+        "appVersion": "1.0.0"
+      },
+      "makers": [
+        {
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "name": "snack_bar"
+          }
+        },
+        {
+          "name": "@electron-forge/maker-zip",
+          "platforms": [
+            "darwin"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-deb",
+          "config": {}
+        },
+        {
+          "name": "@electron-forge/maker-rpm",
+          "config": {}
+        }
+      ]
+    }
+  }
+}
