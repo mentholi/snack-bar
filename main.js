@@ -141,9 +141,9 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   // On OS X it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+  // Example: if (process.platform !== "darwin") { ...
+  // We however quit when the app window closes
+  app.quit();
 });
 
 function showWelcomeNotification() {
