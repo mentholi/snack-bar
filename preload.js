@@ -68,11 +68,17 @@ ipcRenderer.on(NOTIFICATION_RECEIVED, (_, serverNotificationPayload) => {
       return;
     }
 
+    const playSound =
+      store.get("notifications-sounds") === "always" ||
+      (store.get("notifications-sounds") === "mentions" &&
+        isMention(serverNotificationPayload.notification.body));
+
     let myNotification = new Notification(
       serverNotificationPayload.notification.title,
       {
         body: serverNotificationPayload.notification.body,
         icon: path.join(__dirname, "snack_bar.png"),
+        silent: !playSound,
       }
     );
 
@@ -95,6 +101,15 @@ ipcRenderer.on(NOTIFICATION_RECEIVED, (_, serverNotificationPayload) => {
     );
   }
 });
+
+function isMention(message) {
+  const myFirstName = "@" + store.get("my-firstname");
+  const myFullName = store.get("my-fullname");
+  return (
+    message.toLowerCase().indexOf(myFirstName.toLowerCase()) > -1 ||
+    message.toLowerCase().indexOf(myFullName.toLowerCase()) > -1
+  );
+}
 
 // Start service
 const senderId = "456502178225"; // <-- replace with FCM sender ID from FCM web admin under Settings->Cloud Messaging

@@ -19,8 +19,18 @@ let waitForAccessToken;
 const store = new Store();
 
 store.set("giosg-mode", "desktop");
-store.set("notifications-enabled", true);
-store.set("open-conversation-on-notification-click", true);
+
+if (store.get("notifications-enabled") === undefined) {
+  store.set("notifications-enabled", true);
+}
+
+if (store.get("open-conversation-on-notification-click") === undefined) {
+  store.set("open-conversation-on-notification-click", true);
+}
+
+if (!store.get("notifications-sounds") === undefined) {
+  store.set("notifications-sounds", "always");
+}
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -118,6 +128,11 @@ function toggleNotifications() {
   store.set(key, !store.get(key));
 }
 
+function setNotificationSounds(soundMode) {
+  const key = "notifications-sounds";
+  store.set(key, soundMode);
+}
+
 function toggleOpenConvesationOnNotificationClick() {
   const key = "open-conversation-on-notification-click";
   store.set(key, !store.get(key));
@@ -152,6 +167,7 @@ function showWelcomeNotification() {
       title: "Welcome to Snack Bar!",
       body: "Notifications enabled and working! 😎",
       icon: path.join(__dirname, "snack_bar.png"),
+      silent: false,
     }).show();
   }
   NOTIFICATIONS_INITIALIZED = true;
@@ -191,6 +207,7 @@ function setupNotifications() {
         showWelcomeNotification();
         console.log("---------", responseData.subscription_id);
         store.set(SUBSCRIPTION_ID_KEY, responseData.subscription_id);
+        fetchUserInfoForMentions(accessToken.access_token);
       });
     return token;
   });
@@ -208,6 +225,25 @@ function setupNotifications() {
 
     return payload;
   });
+}
+
+function fetchUserInfoForMentions(accessToken) {
+  const url = "https://service.giosg.com/api/v5/users/me";
+
+  fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+  })
+    .then((res) => res.json())
+    .then((myInfo) => {
+      console.log("** ME response: ", myInfo);
+
+      store.set("my-firstname", myInfo.first_name);
+      store.set("my-fullname", myInfo.full_name);
+    });
 }
 
 function buildMenu() {
@@ -287,6 +323,35 @@ function buildMenu() {
           click: () => {
             toggleOpenConvesationOnNotificationClick();
           },
+        },
+        {
+          label: "Notification sounds",
+          submenu: [
+            {
+              label: "Play always",
+              type: "radio",
+              checked: store.get("notifications-sounds") === "always",
+              click: () => {
+                setNotificationSounds("always");
+              },
+            },
+            {
+              label: "Play only on mentions",
+              type: "radio",
+              checked: store.get("notifications-sounds") === "mentions",
+              click: () => {
+                setNotificationSounds("mentions");
+              },
+            },
+            {
+              label: "No sound",
+              type: "radio",
+              checked: store.get("notifications-sounds") === "silent",
+              click: () => {
+                setNotificationSounds("silent");
+              },
+            },
+          ],
         },
       ],
     },
