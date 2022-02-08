@@ -81,9 +81,10 @@ ipcRenderer.on(NOTIFICATION_RECEIVED, (_, serverNotificationPayload) => {
         silent: !playSound,
       }
     );
+    const payload = JSON.stringify(serverNotificationPayload);
+    ipcRenderer.invoke("on-notification-showing", payload);
 
     myNotification.onclick = () => {
-      const payload = JSON.stringify(serverNotificationPayload);
       const isCorrectPath =
         window.document.location.pathname ===
         serverNotificationPayload.data.default_action_path;

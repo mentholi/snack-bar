@@ -19,6 +19,7 @@ let waitForAccessToken;
 const store = new Store();
 
 store.set("giosg-mode", "desktop");
+store.set("unread-since-focus", 0);
 
 if (store.get("notifications-enabled") === undefined) {
   store.set("notifications-enabled", true);
@@ -161,6 +162,12 @@ app.on("window-all-closed", () => {
   app.quit();
 });
 
+app.on("browser-window-focus", () => {
+  // Reset unread since focus count
+  store.set("unread-since-focus", 0);
+  app.dock.setBadge("");
+});
+
 function showWelcomeNotification() {
   if (!NOTIFICATIONS_INITIALIZED) {
     new Notification({
@@ -224,6 +231,19 @@ function setupNotifications() {
     }
 
     return payload;
+  });
+
+  ipcMain.handle("on-notification-showing", async (event, payloadStr) => {
+    if (!mainWindow.isFocused()) {
+      store.set("unread-since-focus", store.get("unread-since-focus") + 1);
+    }
+
+    if (app.dock) {
+      const unreadCount = store.get("unread-since-focus");
+      app.dock.bounce();
+      app.dock.setBadge(unreadCount > 0 ? unreadCount.toString() : "");
+    }
+    return true;
   });
 }
 
