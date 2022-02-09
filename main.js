@@ -1,5 +1,13 @@
-const { app, BrowserWindow, ipcMain, Menu, Notification } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Menu,
+  Notification,
+  shell,
+} = require("electron");
 const { setup: setupPushReceiver } = require("electron-push-receiver");
+const contextMenu = require("electron-context-menu");
 const Store = require("electron-store");
 const fetch = require("electron-fetch").default;
 const path = require("path");
@@ -14,6 +22,12 @@ let NOTIFICATIONS_INITIALIZED = false;
 const USER_AGENT_POSTFIX = "Android/Look-a-like";
 
 const BASE_URL = "https://service.giosg.com";
+
+const OPEN_IN_APP_URLS = [
+  "https://service.giosg.com",
+  "https://interactiondesigner.giosg.com",
+  "https://interactionbuilder.giosg.com",
+];
 
 let waitForAccessToken;
 const store = new Store();
@@ -37,10 +51,20 @@ if (!store.get("notifications-sounds") === undefined) {
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
 
+// Build context menu
+contextMenu({
+  showSaveImage: true,
+  showSaveImageAs: true,
+  showSearchWithGoogle: true,
+  showCopyImageAddress: true,
+  showInspectElement: true,
+});
+
 const createWindow = () => {
   mainWindow = new BrowserWindow({
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
+      spellcheck: true,
     },
     webSecurity: false,
     width: INITIAL_WINDOW_SIZE.width,
@@ -143,7 +167,6 @@ function toggleOpenConvesationOnNotificationClick() {
 app.commandLine.appendSwitch("disable-site-isolation-trials");
 
 app.whenReady().then(() => {
-  console.log("** App ready");
   createWindow();
   setupNotifications();
 
@@ -151,6 +174,21 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
+  });
+});
+
+app.on("web-contents-created", (createEvent, contents) => {
+  contents.setWindowOpenHandler((details) => {
+    console.log("** Opening url", details);
+    const targetUrl = details.url;
+    const isInAppUrl = OPEN_IN_APP_URLS.some((inAppUrl) => {
+      return targetUrl.indexOf(inAppUrl) === 0;
+    });
+    if (!isInAppUrl) {
+      shell.openExternal(targetUrl);
+      return { action: "deny" };
+    }
+    return { action: "allow" };
   });
 });
 
@@ -185,14 +223,14 @@ function setupNotifications() {
   ipcMain.handle("notifications-started", async (event, token) => {
     const accessToken = await waitForAccessToken;
     console.log("Got access token, ", accessToken);
-    console.log(".-.------ Main process received FCM token", token);
+    console.log("------- Main process received FCM token", token);
     const SUBSCRIPTION_ID_KEY = "fcm_subscription_id";
     const subscription_id = store.get(SUBSCRIPTION_ID_KEY);
     console.log("**** Existing FCM subscription ID", subscription_id);
     const hasSubscription = !!subscription_id;
     const baseUrl =
       "https://service.giosg.com/api/notifications/v1/fcm_subscriptions/";
-    url = hasSubscription ? `${baseUrl}${subscription_id}` : baseUrl;
+    const url = hasSubscription ? `${baseUrl}${subscription_id}` : baseUrl;
 
     const payload = {
       registration_id: token,
@@ -212,7 +250,6 @@ function setupNotifications() {
         console.log("PUSH subscription response: ", text);
         const responseData = JSON.parse(text);
         showWelcomeNotification();
-        console.log("---------", responseData.subscription_id);
         store.set(SUBSCRIPTION_ID_KEY, responseData.subscription_id);
         fetchUserInfoForMentions(accessToken.access_token);
       });
@@ -221,8 +258,6 @@ function setupNotifications() {
 
   ipcMain.handle("on-notification-click", async (event, payloadStr) => {
     const payload = JSON.parse(payloadStr);
-    console.log("Ä***************ON MAIN", typeof payload, payload);
-
     // Force mobile mode to open specific channel when notification has been clicked.
     // This is because embedded cant be commanded to open new panel at the momen
     if (store.get("open-conversation-on-notification-click") === true) {
