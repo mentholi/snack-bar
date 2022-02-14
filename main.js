@@ -203,7 +203,9 @@ app.on("window-all-closed", () => {
 app.on("browser-window-focus", () => {
   // Reset unread since focus count
   store.set("unread-since-focus", 0);
-  app.dock.setBadge("");
+  if (app.dock) {
+    app.dock.setBadge("");
+  }
 });
 
 function showWelcomeNotification() {
